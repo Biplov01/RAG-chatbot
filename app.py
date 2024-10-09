@@ -5,10 +5,10 @@ from brain import get_index_for_pdf
 from io import BytesIO
 
 # Set the title for the Streamlit app
-st.title("RAG Enhanced Chatbot")
+st.title("Biplov RAG Chatbot")
 
 # Set OpenAI API key directly (not recommended for production)
-openai.api_key = "RAG Chatbot"
+openai.api_key = "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"
 
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
