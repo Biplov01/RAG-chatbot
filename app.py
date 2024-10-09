@@ -8,7 +8,7 @@ from io import BytesIO
 st.title("Biplov RAG Chatbot")
 
 # Set OpenAI API key directly (not recommended for production)
-openai.api_key = "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"
+openai.api_key = ""
 
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
