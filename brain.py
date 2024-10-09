@@ -1,4 +1,3 @@
-import databutton as db
 import re
 from io import BytesIO
 from typing import Tuple, List
@@ -49,16 +48,15 @@ def text_to_docs(text: List[str], filename: str) -> List[Document]:
     return doc_chunks
 
 
-def docs_to_index(docs, openai_api_key):
-    index = FAISS.from_documents(docs, OpenAIEmbeddings(openai_api_key=openai_api_key))
+def docs_to_index(docs):
+    index = FAISS.from_documents(docs, OpenAIEmbeddings())  # Removed openai_api_key
     return index
 
 
-def get_index_for_pdf(pdf_files, pdf_names, openai_api_key):
+def get_index_for_pdf(pdf_files, pdf_names):
     documents = []
     for pdf_file, pdf_name in zip(pdf_files, pdf_names):
         text, filename = parse_pdf(BytesIO(pdf_file), pdf_name)
         documents = documents + text_to_docs(text, filename)
-    index = docs_to_index(documents, openai_api_key)
+    index = docs_to_index(documents)
     return index
-
