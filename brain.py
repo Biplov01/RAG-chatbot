@@ -1,19 +1,16 @@
+import databutton as db
 import re
 from io import BytesIO
 from typing import Tuple, List
 import pickle
 
 from langchain.docstore.document import Document
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 from pypdf import PdfReader
 import faiss
 
-# You can implement your own embedding class or replace it with another method
-class CustomEmbeddings:
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        # Placeholder: Replace with your own logic for generating embeddings
-        return [[float(i) for i in range(len(text))] for text in texts]  # Dummy embeddings
 
 def parse_pdf(file: BytesIO, filename: str) -> Tuple[List[str], str]:
     pdf = PdfReader(file)
@@ -52,15 +49,16 @@ def text_to_docs(text: List[str], filename: str) -> List[Document]:
     return doc_chunks
 
 
-def docs_to_index(docs):
-    index = FAISS.from_documents(docs, CustomEmbeddings())  # Using CustomEmbeddings
+def docs_to_index(docs, openai_api_key):
+    index = FAISS.from_documents(docs, OpenAIEmbeddings(openai_api_key=openai_api_key))
     return index
 
 
-def get_index_for_pdf(pdf_files, pdf_names):
+def get_index_for_pdf(pdf_files, pdf_names, openai_api_key):
     documents = []
     for pdf_file, pdf_name in zip(pdf_files, pdf_names):
         text, filename = parse_pdf(BytesIO(pdf_file), pdf_name)
         documents = documents + text_to_docs(text, filename)
-    index = docs_to_index(documents)
+    index = docs_to_index(documents, openai_api_key)
     return index
+
