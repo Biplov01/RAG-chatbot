@@ -7,11 +7,18 @@ from io import BytesIO
 # Set the title for the Streamlit app
 st.title("Biplov RAG Chatbot")
 
-# Set OpenAI API key directly (not recommended for production)
-openai.api_key = ""
+# Create a text input for the OpenAI API key with a key emoji
+openai_api_key = st.text_input("🔑 Enter your OpenAI API Key", type="password")
 
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
+
+# Check if the API key is provided
+if openai_api_key:
+    openai.api_key = openai_api_key
+else:
+    st.warning("Please enter your OpenAI API key to proceed.")
+    st.stop()
 
 # Cached function to create a vectordb for the provided PDF file
 @st.cache_data
