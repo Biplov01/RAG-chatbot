@@ -9,23 +9,20 @@ st.title("RAG Enhanced Chatbot")
 # Set OpenAI API key directly (not recommended for production)
 openai.api_key = "RAG Chatbot"
 
+# Path to the default PDF file
+default_pdf_path = "a1r.pdf"
+
 # Cached function to create a vectordb for the provided PDF files
 @st.cache_data
-def create_vectordb(files, filenames):
+def create_vectordb(pdf_path):
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
-        vectordb = get_index_for_pdf(
-            [file.getvalue() for file in files], filenames, openai.api_key
-        )
+        vectordb = get_index_for_pdf([pdf_path], [default_pdf_path], openai.api_key)
     return vectordb
 
-# Upload PDF files using Streamlit's file uploader
-pdf_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
-
-# If PDF files are uploaded, create the vectordb and store it in the session state
-if pdf_files:
-    pdf_file_names = [file.name for file in pdf_files]
-    st.session_state["vectordb"] = create_vectordb(pdf_files, pdf_file_names)
+# Create the vectordb using the default PDF file
+vectordb = create_vectordb(default_pdf_path)
+st.session_state["vectordb"] = vectordb
 
 # Define the template for the chatbot prompt
 prompt_template = """
