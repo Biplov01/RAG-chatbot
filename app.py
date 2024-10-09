@@ -2,6 +2,7 @@
 import streamlit as st
 import openai
 from brain import get_index_for_pdf
+from io import BytesIO
 
 # Set the title for the Streamlit app
 st.title("RAG Enhanced Chatbot")
@@ -12,12 +13,16 @@ openai.api_key = "RAG Chatbot"
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
 
-# Cached function to create a vectordb for the provided PDF files
+# Cached function to create a vectordb for the provided PDF file
 @st.cache_data
 def create_vectordb(pdf_path):
+    # Read the PDF file as bytes
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+    
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
-        vectordb = get_index_for_pdf([pdf_path], [default_pdf_path], openai.api_key)
+        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai.api_key)
     return vectordb
 
 # Create the vectordb using the default PDF file
