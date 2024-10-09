@@ -9,7 +9,7 @@ st.title("Everything about Myself")
 # Set OpenAI API key directly (not recommended for production)
 openai.api_key = "RAG Chatbot"
 
-# Function to read the predefined PDF file (a1.pdf)
+# Function to read the predefined PDF file (a1r.pdf)
 def read_predefined_pdf():
     # Open the PDF file and return its content
     with open("a1r.pdf", "rb") as f:  # No path needed since it's in the same directory
@@ -21,7 +21,7 @@ def read_predefined_pdf():
 def create_vectordb():
     # Read the predefined PDF file
     pdf_content = read_predefined_pdf()
-    pdf_file_name = "a1.pdf"
+    pdf_file_name = "a1r.pdf"
     
     # Show a spinner while creating the vectordb
     with st.spinner("Creating vector database from the PDF..."):
