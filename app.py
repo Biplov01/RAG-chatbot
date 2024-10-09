@@ -4,16 +4,12 @@ import openai
 from brain import get_index_for_pdf
 from io import BytesIO
 
-# Set the title for the Streamlit app with a large chatbot emoji behind it
+# Set the title for the Streamlit app
+st.title("Biplov RAG Chatbot")
+
+# Add a large chatbot emoji below the title
 st.markdown(
-    """
-    <h1 style='text-align: center; position: relative;'>
-        Biplov RAG Chatbot
-        <span style='font-size: 100px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);'>
-            🤖
-        </span>
-    </h1>
-    """,
+    "<h1 style='text-align: center; font-size: 100px;'>🤖</h1>",
     unsafe_allow_html=True
 )
 
@@ -107,7 +103,7 @@ if question:
     response = []
     result = ""
     for chunk in openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=st.session_state["prompt"], stream=True
+        model="gpt-4", messages=st.session_state["prompt"], stream=True
     ):
         text = chunk.choices[0].get("delta", {}).get("content")
         if text:
