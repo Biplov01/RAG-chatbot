@@ -4,8 +4,18 @@ import openai
 from brain import get_index_for_pdf
 from io import BytesIO
 
-# Set the title for the Streamlit app
-st.title("Biplov RAG Chatbot")
+# Set the title for the Streamlit app with a large chatbot emoji behind it
+st.markdown(
+    """
+    <h1 style='text-align: center; position: relative;'>
+        Biplov RAG Chatbot
+        <span style='font-size: 100px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);'>
+            🤖
+        </span>
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
 
 # Create a text input for the OpenAI API key with a key emoji
 openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", placeholder="🔑 API Key")
