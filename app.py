@@ -8,7 +8,7 @@ from io import BytesIO
 st.title("Biplov RAG Chatbot")
 
 # Create a text input for the OpenAI API key with a key emoji
-openai_api_key = st.text_input("🔑 Enter your OpenAI API Key", type="password")
+openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", placeholder="🔑 API Key")
 
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
