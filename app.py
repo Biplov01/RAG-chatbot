@@ -12,7 +12,7 @@ openai.api_key = "RAG Chatbot"
 # Function to read the predefined PDF file (a1.pdf)
 def read_predefined_pdf():
     # Open the PDF file and return its content
-    with open("a1.pdf", "rb") as f:  # No path needed since it's in the same directory
+    with open("a1r.pdf", "rb") as f:  # No path needed since it's in the same directory
         pdf_content = f.read()
     return pdf_content
 
