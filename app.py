@@ -21,7 +21,7 @@ def create_vectordb():
     
     # Show a spinner while creating the vectordb
     with st.spinner("Creating vector database from the PDF..."):
-        vectordb = get_index_for_pdf([pdf_content], [pdf_file_name])  # Removed openai.api_key
+        vectordb = get_index_for_pdf([pdf_content], [pdf_file_name])  # Removed openai.api.key
     return vectordb
 
 # Create the vectordb when the app starts
@@ -75,15 +75,13 @@ if question:
     with st.chat_message("assistant"):
         botmsg = st.empty()
 
-    # Call OpenAI API with streaming and display the response
-    response = []
-    for chunk in openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=st.session_state["prompt"], stream=True
-    ):
-        text = chunk.choices[0].get("delta", {}).get("content")
-        if text:
-            response.append(text)
-            botmsg.write("".join(response).strip())
+    # Simulate the response process without using OpenAI API
+    # Here you might implement your own response logic based on `pdf_extract`
+    # For demonstration purposes, we will simply echo the question
+    response_text = f"You asked: {question} (This is a placeholder response.)"
+    
+    # Write the response to the chat message
+    botmsg.write(response_text.strip())
 
     # Add the assistant's response to the prompt and update session state
-    st.session_state["prompt"].append({"role": "assistant", "content": "".join(response).strip()})
+    st.session_state["prompt"].append({"role": "assistant", "content": response_text.strip()})
