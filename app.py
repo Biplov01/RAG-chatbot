@@ -1,87 +1,79 @@
-# Import necessary libraries
-import streamlit as st
-from brain import get_index_for_pdf
+import os
+import requests
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
+import re
 
-# Set the title for the Streamlit app
-st.title("Everything about Myself")
+# Load environment variables from .env file
+load_dotenv()
 
-# Function to read the predefined PDF file (a1r.pdf)
-def read_predefined_pdf():
-    # Open the PDF file and return its content
-    with open("a1r.pdf", "rb") as f:  # No path needed since it's in the same directory
-        pdf_content = f.read()
-    return pdf_content
+app = Flask(__name__)
 
-# Cached function to create a vectordb for the predefined PDF file
-@st.cache_data
-def create_vectordb():
-    # Read the predefined PDF file
-    pdf_content = read_predefined_pdf()
-    pdf_file_name = "a1r.pdf"
-    
-    # Show a spinner while creating the vectordb
-    with st.spinner("Creating vector database from the PDF..."):
-        vectordb = get_index_for_pdf([pdf_content], [pdf_file_name])  # Removed openai.api.key
-    return vectordb
+LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
 
-# Create the vectordb when the app starts
-vectordb = create_vectordb()
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+    if not data or "message" not in data:
+        return jsonify({"error": "Invalid input"}), 400
 
-# Initialize the chat history in session state if not already set
-if "prompt" not in st.session_state:
-    st.session_state["prompt"] = [{"role": "system", "content": "none"}]
+    user_message = data["message"]
+    headers = {"Authorization": f"Bearer {LANGCHAIN_API_KEY}", "Content-Type": "application/json"}
+    payload = {"query": user_message}
 
-# Display previous chat messages
-for message in st.session_state["prompt"]:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    try:
+        response = requests.post(LANGCHAIN_ENDPOINT, json=payload, headers=headers)
+        response.raise_for_status()
+        bot_response = response.json()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Error occurred: {e}"}), 500
 
-# Get the user's question using Streamlit's chat input
-question = st.chat_input("Ask anything about me")
+    return jsonify({"response": bot_response.get("response", "No response from bot")})
 
-# Handle the user's question
-if question:
-    # Search the vectordb for similar content to the user's question
-    search_results = vectordb.similarity_search(question, k=3)
-    pdf_extract = "\n".join([result.page_content for result in search_results])
+@app.route("/book_appointment", methods=["POST"])
+def book_appointment():
+    data = request.get_json()
+    if not data or not all(k in data for k in ("name", "phone", "email", "date")):
+        return jsonify({"error": "Missing required fields"}), 400
 
-    # Update the system prompt with the PDF extract
-    st.session_state["prompt"][0] = {
-        "role": "system",
-        "content": f"""
-            You are a helpful Assistant who answers users' questions based on multiple contexts given to you.
+    name = data["name"]
+    phone = data["phone"]
+    email = data["email"]
+    date_str = data["date"]
 
-            Keep your answer short and to the point.
+    # Validate email
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return jsonify({"error": "Invalid email address"}), 400
 
-            The evidence is the context of the PDF extract with metadata. 
-            Carefully focus on the metadata, especially 'filename' and 'page', whenever answering.
+    # Validate phone number
+    if not re.match(r"^\+?\d{10,15}$", phone):
+        return jsonify({"error": "Invalid phone number"}), 400
 
-            Make sure to add filename and page number at the end of the sentence you are citing to.
-            
-            Reply "Not applicable" if the text is irrelevant.
-             
-            The PDF content is:
-            {pdf_extract}
-        """,
-    }
+    # Parse and validate date
+    try:
+        appointment_date = parse_date(date_str)
+        if appointment_date < datetime.now():
+            return jsonify({"error": "Date cannot be in the past"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400
 
-    # Add the user's question to the prompt and display it
-    st.session_state["prompt"].append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.write(question)
+    # Normally, you'd save the appointment details to a database here
 
-    # Display an empty assistant message while waiting for the response
-    with st.chat_message("assistant"):
-        botmsg = st.empty()
+    return jsonify({"message": "Appointment booked successfully"})
 
-    # Simulate the response process without using OpenAI API
-    # Here you might implement your own response logic based on `pdf_extract`
-    # For demonstration purposes, we will simply echo the question
-    response_text = f"You asked: {question} (This is a placeholder response.)"
-    
-    # Write the response to the chat message
-    botmsg.write(response_text.strip())
+def parse_date(date_str):
+    today = datetime.now()
+    if date_str.lower() == "next monday":
+        days_ahead = 0 - today.weekday() + 7
+        if days_ahead <= 0:
+            days_ahead += 7
+        return today + timedelta(days_ahead)
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
 
-    # Add the assistant's response to the prompt and update session state
-    st.session_state["prompt"].append({"role": "assistant", "content": response_text.strip()})
+if __name__ == "__main__":
+    app.run(debug=True)
