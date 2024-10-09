@@ -1,13 +1,9 @@
 # Import necessary libraries
 import streamlit as st
-import openai
 from brain import get_index_for_pdf
 
 # Set the title for the Streamlit app
 st.title("Everything about Myself")
-
-# Set OpenAI API key directly (not recommended for production)
-openai.api_key = "RAG Chatbot"
 
 # Function to read the predefined PDF file (a1r.pdf)
 def read_predefined_pdf():
@@ -25,7 +21,7 @@ def create_vectordb():
     
     # Show a spinner while creating the vectordb
     with st.spinner("Creating vector database from the PDF..."):
-        vectordb = get_index_for_pdf([pdf_content], [pdf_file_name], openai.api_key)
+        vectordb = get_index_for_pdf([pdf_content], [pdf_file_name])  # Removed openai.api_key
     return vectordb
 
 # Create the vectordb when the app starts
