@@ -4,7 +4,7 @@ import openai
 from brain import get_index_for_pdf
 
 # Set the title for the Streamlit app
-st.title("RAG Enhanced Chatbot")
+st.title("Everything about myself")
 
 # Set OpenAI API key directly (not recommended for production)
 openai.api_key = "RAG Chatbot"
