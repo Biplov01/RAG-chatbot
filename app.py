@@ -1,8 +1,8 @@
 # Import necessary libraries
 import streamlit as st
-import openai
 from brain import get_index_for_pdf
 from io import BytesIO
+import requests
 
 # Set the title for the Streamlit app
 st.title("Biplov RAG Chatbot")
@@ -13,17 +13,20 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Create a text input for the OpenAI API key with a key emoji
-openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", placeholder="🔑 API Key")
+# Create a text input for the Gemini API key with a key emoji
+gemini_api_key = st.text_input("Enter your Gemini API Key", type="password", placeholder="🔑 API Key")
 
 # Path to the default PDF file
 default_pdf_path = "a1r.pdf"
 
 # Check if the API key is provided
-if openai_api_key:
-    openai.api_key = openai_api_key
+if gemini_api_key:
+    gemini_headers = {
+        "Authorization": f"Bearer {gemini_api_key}",
+        "Content-Type": "application/json"
+    }
 else:
-    st.warning("Please enter your OpenAI API key to proceed.")
+    st.warning("Please enter your Gemini API key to proceed.")
     st.stop()
 
 # Cached function to create a vectordb for the provided PDF file
@@ -35,7 +38,7 @@ def create_vectordb(pdf_path):
     
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
-        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai.api_key)
+        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], gemini_headers)
     return vectordb
 
 # Create the vectordb using the default PDF file
@@ -99,17 +102,35 @@ if question:
     with st.chat_message("assistant"):
         botmsg = st.empty()
 
-    # Call OpenAI API with streaming and display the response
+    # Call Gemini API to generate the response
     response = []
+    payload = {
+        "model": "gemini-1",  # Adjust based on the model you're using
+        "messages": st.session_state["prompt"],
+        "stream": True
+    }
+    
+    # Stream the response from Gemini API
     result = ""
-    for chunk in openai.ChatCompletion.create(
-        model="gpt-4", messages=st.session_state["prompt"], stream=True
-    ):
-        text = chunk.choices[0].get("delta", {}).get("content")
-        if text:
-            response.append(text)
-            result = "".join(response).strip()
-            botmsg.write(result)
+    try:
+        res = requests.post(
+            "https://api.gemini.com/v1/chat/completions",  # Replace with the correct Gemini API endpoint
+            headers=gemini_headers,
+            json=payload,
+            stream=True
+        )
+        
+        for line in res.iter_lines():
+            if line:
+                chunk = line.decode("utf-8")
+                response.append(chunk)
+                result = "".join(response).strip()
+                botmsg.write(result)
+    
+    except Exception as e:
+        with st.chat_message("assistant"):
+            st.write(f"Error: {e}")
+        st.stop()
 
     # Add the assistant's response to the prompt and update session state
     st.session_state["prompt"].append({"role": "assistant", "content": result})
