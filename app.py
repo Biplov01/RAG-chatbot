@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+import openai
 from brain import get_index_for_pdf
 from io import BytesIO
 
@@ -24,7 +24,7 @@ if not openai_api_key:
     st.stop()
 
 # Initialize OpenAI client
-client = OpenAI(api_key=openai_api_key)
+openai.api_key = openai_api_key
 
 # Cached function to create a vectordb for the provided PDF file
 @st.cache_resource
@@ -100,7 +100,7 @@ if question:
         botmsg = st.empty()
 
     # Call OpenAI API with streaming and display the response
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=st.session_state["prompt"],
         stream=True
@@ -108,10 +108,12 @@ if question:
 
     result = ""
     for chunk in response:
-        text = chunk.choices[0].delta.get("content", "")
-        if text:
-            result += text
-            botmsg.write(result.strip())
+        if "choices" in chunk and chunk["choices"]:
+            delta = chunk["choices"][0].get("delta", {})
+            text = delta.get("content", "")
+            if text:
+                result += text
+                botmsg.write(result.strip())
 
     # Add the assistant's response to the prompt and update session state
     st.session_state["prompt"].append({"role": "assistant", "content": result.strip()})
