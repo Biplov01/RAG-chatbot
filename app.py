@@ -26,7 +26,7 @@ else:
     st.stop()
 
 # Cached function to create a vectordb for the provided PDF file
-@st.cache_data
+@st.cache_resource
 def create_vectordb(pdf_path):
     # Read the PDF file as bytes
     with open(pdf_path, "rb") as f:
@@ -35,7 +35,7 @@ def create_vectordb(pdf_path):
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
         vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai.api_key)
-    return vectordb
+    return vectordb  # This should now be cacheable as a resource
 
 # Create the vectordb using the default PDF file
 vectordb = create_vectordb(default_pdf_path)
