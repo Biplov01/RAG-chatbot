@@ -32,7 +32,7 @@ def create_vectordb(pdf_path):
     # Read the PDF file as bytes
     with open(pdf_path, "rb") as f:
         pdf_bytes = f.read()
-    
+
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
         vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai_api_key)
@@ -47,14 +47,14 @@ prompt_template = """
     You are a helpful Assistant who answers users' questions based on multiple contexts given to you.
 
     Keep your answer short and to the point.
-    
+
     The evidence is the context of the PDF extract with metadata. 
     Carefully focus on the metadata, especially 'filename' and 'page', whenever answering.
-    
+
     Make sure to add filename and page number at the end of the sentence you are citing to.
-        
+
     Reply "Not applicable" if the text is irrelevant.
-     
+
     The PDF content is:
     {pdf_extract}
 """
@@ -99,8 +99,8 @@ if question:
     with st.chat_message("assistant"):
         botmsg = st.empty()
 
-    # Updated OpenAI API call using the correct method (streaming)
-    response = openai.chat_completions.create(
+    # Correct OpenAI API call
+    response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=st.session_state["prompt"],
         stream=True
