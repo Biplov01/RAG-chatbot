@@ -99,8 +99,8 @@ if question:
     with st.chat_message("assistant"):
         botmsg = st.empty()
 
-    # Call OpenAI API with streaming and display the response
-    response = openai.ChatCompletion.create(
+    # Updated OpenAI API call using the correct method (streaming)
+    response = openai.chat_completions.create(
         model="gpt-4",
         messages=st.session_state["prompt"],
         stream=True
