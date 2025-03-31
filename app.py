@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 from brain import get_index_for_pdf
 from io import BytesIO
 
@@ -19,11 +19,12 @@ openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", pla
 default_pdf_path = "a1r.pdf"
 
 # Check if the API key is provided
-if openai_api_key:
-    openai.api_key = openai_api_key
-else:
+if not openai_api_key:
     st.warning("Please enter your OpenAI API key to proceed.")
     st.stop()
+
+# Initialize OpenAI client
+client = OpenAI(api_key=openai_api_key)
 
 # Cached function to create a vectordb for the provided PDF file
 @st.cache_resource
@@ -34,8 +35,8 @@ def create_vectordb(pdf_path):
     
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database creation in progress..."):
-        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai.api_key)
-    return vectordb  # This should now be cacheable as a resource
+        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai_api_key)
+    return vectordb
 
 # Create the vectordb using the default PDF file
 vectordb = create_vectordb(default_pdf_path)
@@ -99,16 +100,18 @@ if question:
         botmsg = st.empty()
 
     # Call OpenAI API with streaming and display the response
-    response = []
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=st.session_state["prompt"],
+        stream=True
+    )
+
     result = ""
-    for chunk in openai.ChatCompletion.create(
-        model="gpt-4", messages=st.session_state["prompt"], stream=True
-    ):
-        text = chunk.choices[0].get("delta", {}).get("content")
+    for chunk in response:
+        text = chunk.choices[0].delta.get("content", "")
         if text:
-            response.append(text)
-            result = "".join(response).strip()
-            botmsg.write(result)
+            result += text
+            botmsg.write(result.strip())
 
     # Add the assistant's response to the prompt and update session state
-    st.session_state["prompt"].append({"role": "assistant", "content": result})
+    st.session_state["prompt"].append({"role": "assistant", "content": result.strip()})
