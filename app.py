@@ -95,7 +95,7 @@ if question:
     
     # Updated OpenAI API call using the new client approach
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         messages=st.session_state["prompt"],
         stream=True
     )
