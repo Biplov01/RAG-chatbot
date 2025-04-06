@@ -16,7 +16,7 @@ st.markdown(
 openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", placeholder="🔑 API Key")
 
 # Path to the default PDF file
-default_pdf_path = "about.pdf"
+default_pdf_path = "integrated digital electronic book (1).pdf"
 
 # Check if the API key is provided
 if not openai_api_key:
