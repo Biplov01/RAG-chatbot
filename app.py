@@ -19,7 +19,7 @@ st.markdown(
 openrouter_api_key = st.text_input("Enter your OpenRouter API Key", type="password", placeholder="🔑 API Key")
 
 # Path to the default PDF file
-default_pdf_path = "about.pdf"
+default_pdf_path = "about2.pdf"
 
 # Check if the API key is provided
 if not openrouter_api_key:
