@@ -1,7 +1,8 @@
+streamlit
 openai
-langchain
-faiss-cpu
 pypdf
-tiktoken
-databutton
-langchain_community
+faiss-cpu
+langchain-core
+langchain-community
+langchain-openai
+langchain-text-splitters
