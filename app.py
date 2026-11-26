@@ -4,7 +4,7 @@ import streamlit as st
 from brain import OPENROUTER_BASE_URL, get_index_for_pdf
 
 # Any OpenRouter model ID works here
-CHAT_MODEL = "google/gemma-4-26b-a4b-it:free"
+CHAT_MODEL = "openai/gpt-4o-mini"
 
 # Set the title for the Streamlit app
 st.title("Biplov RAG Chatbot")
@@ -27,7 +27,11 @@ if not openrouter_api_key:
     st.stop()
 
 # OpenRouter is OpenAI-compatible, so the OpenAI client works with a different base URL
-client = openai.OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
+client = openai.OpenAI(
+    api_key=openrouter_api_key,
+    base_url=OPENROUTER_BASE_URL,
+    max_retries=5,  # back off and retry on 429s
+)
 
 
 # Cached per PDF path and API key, so one user's key is never reused for another
@@ -93,18 +97,24 @@ if question:
     with st.chat_message("assistant"):
         botmsg = st.empty()
 
-    response = client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=st.session_state["prompt"],
-        stream=True
-    )
+    try:
+        response = client.chat.completions.create(
+            model=CHAT_MODEL,
+            messages=st.session_state["prompt"],
+            stream=True
+        )
 
-    result = ""
-    for chunk in response:
-        # Some stream chunks carry no choices (e.g. usage data)
-        if chunk.choices and chunk.choices[0].delta.content:
-            result += chunk.choices[0].delta.content
-            botmsg.write(result.strip())
+        result = ""
+        for chunk in response:
+            # Some stream chunks carry no choices (e.g. usage data)
+            if chunk.choices and chunk.choices[0].delta.content:
+                result += chunk.choices[0].delta.content
+                botmsg.write(result.strip())
+    except openai.APIError as e:
+        # Drop the unanswered question and show OpenRouter's actual reason
+        st.session_state["prompt"].pop()
+        botmsg.error(f"OpenRouter request failed: {e.message}")
+        st.stop()
 
     # Add the assistant's response to the prompt and update session state
     st.session_state["prompt"].append({"role": "assistant", "content": result.strip()})
