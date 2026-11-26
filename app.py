@@ -4,7 +4,7 @@ import streamlit as st
 from brain import OPENROUTER_BASE_URL, get_index_for_pdf
 
 # Any OpenRouter model ID works here
-CHAT_MODEL = "openai/gpt-4o-mini"
+CHAT_MODEL = "google/gemma-4-26b-a4b-it:free"
 
 # Set the title for the Streamlit app
 st.title("Biplov RAG Chatbot")
