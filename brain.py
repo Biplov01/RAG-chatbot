@@ -1,15 +1,12 @@
-import databutton as db
 import re
 from io import BytesIO
-from typing import Tuple, List
-import pickle
+from typing import List, Tuple
 
-from langchain.docstore.document import Document
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores.faiss import FAISS
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
-import faiss
 
 
 def parse_pdf(file: BytesIO, filename: str) -> Tuple[List[str], str]:
@@ -17,9 +14,8 @@ def parse_pdf(file: BytesIO, filename: str) -> Tuple[List[str], str]:
     pdf = PdfReader(file)
     output = []
     for page in pdf.pages:
-        text = page.extract_text()
-        if text is None:
-            continue  # Skip empty pages
+        # Keep empty pages as "" so page numbers stay correct
+        text = page.extract_text() or ""
 
         text = re.sub(r"(\w+)-\n(\w+)", r"\1\2", text)  # Fix hyphenated words
         text = re.sub(r"(?<!\n\s)\n(?!\s\n)", " ", text.strip())  # Merge line breaks
@@ -33,28 +29,26 @@ def text_to_docs(text: List[str], filename: str) -> List[Document]:
     if isinstance(text, str):
         text = [text]
 
-    page_docs = [Document(page_content=page, metadata={"page": i + 1}) for i, page in enumerate(text)]
-
-    doc_chunks = []
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=4000,
         separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
         chunk_overlap=0,
     )
 
-    for doc in page_docs:
-        chunks = text_splitter.split_text(doc.page_content)
-        for i, chunk in enumerate(chunks):
-            chunk_doc = Document(
-                page_content=chunk,
-                metadata={
-                    "page": doc.metadata["page"],
-                    "chunk": i,
-                    "source": f"{doc.metadata['page']}-{i}",
-                    "filename": filename,
-                },
+    doc_chunks = []
+    for page_number, page_text in enumerate(text, start=1):
+        for i, chunk in enumerate(text_splitter.split_text(page_text)):
+            doc_chunks.append(
+                Document(
+                    page_content=chunk,
+                    metadata={
+                        "page": page_number,
+                        "chunk": i,
+                        "source": f"{page_number}-{i}",
+                        "filename": filename,
+                    },
+                )
             )
-            doc_chunks.append(chunk_doc)
     return doc_chunks
 
 
@@ -72,5 +66,8 @@ def get_index_for_pdf(pdf_files: List[bytes], pdf_names: List[str], openai_api_k
     for pdf_file, pdf_name in zip(pdf_files, pdf_names):
         text, filename = parse_pdf(BytesIO(pdf_file), pdf_name)
         documents.extend(text_to_docs(text, filename))
+
+    if not documents:
+        raise ValueError("No extractable text found. Scanned PDFs need OCR first.")
 
     return docs_to_index(documents, openai_api_key)
