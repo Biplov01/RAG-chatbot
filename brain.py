@@ -8,6 +8,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
 
 def parse_pdf(file: BytesIO, filename: str) -> Tuple[List[str], str]:
     """Extracts text from a PDF file and returns cleaned text."""
@@ -52,12 +55,18 @@ def text_to_docs(text: List[str], filename: str) -> List[Document]:
     return doc_chunks
 
 
-def docs_to_index(docs: List[Document], openai_api_key: str) -> FAISS:
-    """Creates a FAISS vector index from documents using OpenAI embeddings."""
-    return FAISS.from_documents(docs, OpenAIEmbeddings(openai_api_key=openai_api_key))
+def docs_to_index(docs: List[Document], api_key: str) -> FAISS:
+    """Creates a FAISS vector index from documents using OpenRouter embeddings."""
+    embeddings = OpenAIEmbeddings(
+        model=EMBEDDING_MODEL,
+        api_key=api_key,
+        base_url=OPENROUTER_BASE_URL,
+        check_embedding_ctx_length=False,  # send raw text, not OpenAI token IDs
+    )
+    return FAISS.from_documents(docs, embeddings)
 
 
-def get_index_for_pdf(pdf_files: List[bytes], pdf_names: List[str], openai_api_key: str) -> FAISS:
+def get_index_for_pdf(pdf_files: List[bytes], pdf_names: List[str], api_key: str) -> FAISS:
     """Processes multiple PDFs and returns a FAISS index."""
     if not pdf_files:
         raise ValueError("No PDF files provided")
@@ -70,4 +79,4 @@ def get_index_for_pdf(pdf_files: List[bytes], pdf_names: List[str], openai_api_k
     if not documents:
         raise ValueError("No extractable text found. Scanned PDFs need OCR first.")
 
-    return docs_to_index(documents, openai_api_key)
+    return docs_to_index(documents, api_key)
