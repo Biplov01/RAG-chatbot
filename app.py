@@ -1,7 +1,10 @@
-import streamlit as st
 import openai
-from brain import get_index_for_pdf
-from io import BytesIO
+import streamlit as st
+
+from brain import OPENROUTER_BASE_URL, get_index_for_pdf
+
+# Any OpenRouter model ID works here
+CHAT_MODEL = "openai/gpt-4o-mini"
 
 # Set the title for the Streamlit app
 st.title("Biplov RAG Chatbot")
@@ -12,34 +15,32 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Create a text input for the OpenAI API key with a key emoji
-openai_api_key = st.text_input("Enter your OpenAI API Key", type="password", placeholder="🔑 API Key")
+# Create a text input for the OpenRouter API key with a key emoji
+openrouter_api_key = st.text_input("Enter your OpenRouter API Key", type="password", placeholder="🔑 API Key")
 
 # Path to the default PDF file
 default_pdf_path = "about.pdf"
 
 # Check if the API key is provided
-if not openai_api_key:
-    st.warning("Please enter your OpenAI API key to proceed.")
+if not openrouter_api_key:
+    st.warning("Please enter your OpenRouter API key to proceed.")
     st.stop()
 
-# Initialize OpenAI client with the updated client approach
-client = openai.OpenAI(api_key=openai_api_key)
+# OpenRouter is OpenAI-compatible, so the OpenAI client works with a different base URL
+client = openai.OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
 
-# Cached function to create a vectordb for the provided PDF file
-@st.cache_resource
-def create_vectordb(pdf_path):
+
+# Cached per PDF path and API key, so one user's key is never reused for another
+@st.cache_resource(show_spinner="Vector database creation in progress...")
+def create_vectordb(pdf_path, api_key):
     # Read the PDF file as bytes
     with open(pdf_path, "rb") as f:
         pdf_bytes = f.read()
-    # Show a spinner while creating the vectordb
-    with st.spinner("Vector database creation in progress..."):
-        vectordb = get_index_for_pdf([pdf_bytes], [pdf_path], openai_api_key)
-    return vectordb
+    return get_index_for_pdf([pdf_bytes], [pdf_path], api_key)
+
 
 # Create the vectordb using the default PDF file
-vectordb = create_vectordb(default_pdf_path)
-st.session_state["vectordb"] = vectordb
+vectordb = create_vectordb(default_pdf_path, openrouter_api_key)
 
 # Define the template for the chatbot prompt
 prompt_template = """
@@ -68,45 +69,42 @@ question = st.chat_input("Ask anything")
 
 # Handle the user's question
 if question:
-    vectordb = st.session_state.get("vectordb", None)
-    if not vectordb:
-        with st.chat_message("assistant"):
-            st.write("You need to provide a PDF.")
-        st.stop()
-    
     # Search the vectordb for similar content to the user's question
     search_results = vectordb.similarity_search(question, k=3)
-    pdf_extract = "\n".join([result.page_content for result in search_results])
-    
+
+    # Include filename and page so the model can cite them
+    pdf_extract = "\n\n".join(
+        f"[filename: {doc.metadata['filename']}, page: {doc.metadata['page']}]\n{doc.page_content}"
+        for doc in search_results
+    )
+
     # Update the system prompt with the pdf extract
     st.session_state["prompt"][0] = {
         "role": "system",
         "content": prompt_template.format(pdf_extract=pdf_extract),
     }
-    
+
     # Add the user's question to the prompt and display it
     st.session_state["prompt"].append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.write(question)
-    
+
     # Display an empty assistant message while waiting for the response
     with st.chat_message("assistant"):
         botmsg = st.empty()
-    
-    # Updated OpenAI API call using the new client approach
+
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=CHAT_MODEL,
         messages=st.session_state["prompt"],
         stream=True
     )
-    
+
     result = ""
     for chunk in response:
-        if hasattr(chunk.choices[0].delta, 'content'):
-            text = chunk.choices[0].delta.content
-            if text:
-                result += text
-                botmsg.write(result.strip())
-    
+        # Some stream chunks carry no choices (e.g. usage data)
+        if chunk.choices and chunk.choices[0].delta.content:
+            result += chunk.choices[0].delta.content
+            botmsg.write(result.strip())
+
     # Add the assistant's response to the prompt and update session state
     st.session_state["prompt"].append({"role": "assistant", "content": result.strip()})
